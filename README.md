@@ -169,12 +169,13 @@ terraform init
 ### 構文チェック
 
 ```bash
-```
+terraform validate
+
 
 ### 実行計画確認
 
 ```bash
-```
+terraform plan
 
 ### 環境構築
 
@@ -236,7 +237,7 @@ terraform destroy
 Terraform実行後、
 
 ```bash
-```
+terraform apply
 
 のみで以下が自動実行される環境を構築しました。
 
@@ -247,14 +248,13 @@ Terraform実行後、
 * nginxコンテナ起動
 
 ブラウザからEC2へアクセスし、nginxのWebページ表示を確認しました。
-terraform apply
+
 ## 結果
 * UserDataで自作HTMLを自動配置
 
 * nginxコンテナの利用方法
 ```
-terraform plan
-terraform validate
+
 ```bash
 
 

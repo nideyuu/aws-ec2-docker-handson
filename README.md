@@ -24,33 +24,59 @@
 Internet
     │
     ▼
-Internet Gateway
+Application Load Balancer
+(Public Subnet 1a / 1c)
     │
     ▼
-Public Subnet (10.0.0.0/24)
+Target Group
     │
     ▼
-EC2 (Amazon Linux 2023)
+EC2
+(Private Subnet 1a)
     │
     ▼
 Docker
     │
     ▼
 nginx Container
-```
 
+Private EC2 outbound access:
+EC2
+    │
+    ▼
+NAT Gateway
+(Public Subnet 1a)
+    │
+    ▼
+Internet Gateway
+    │
+    ▼
+Internet
+
+Management access:
+Systems Manager Session Manager
+    │
+    ▼
+Private EC2
 ---
 
 ## 使用技術
 
 ### AWS
 
-* VPC
-* Public Subnet
-* Internet Gateway
-* Route Table
-* Security Group
-* EC2
+- VPC
+- Public Subnet
+- Private Subnet
+- Internet Gateway
+- NAT Gateway
+- Elastic IP
+- Route Table
+- Security Group
+- EC2
+- Application Load Balancer
+- Target Group
+- IAM Role
+- Systems Manager Session Manager
 
 ### OS
 
@@ -97,14 +123,24 @@ aws-ec2-docker-handson/
 
 ## Terraformで構築したリソース
 
-* VPC
-* Public Subnet
-* Internet Gateway
-* Route Table
-* Route Table Association
-* Security Group
-* EC2 Instance
-
+- VPC
+- Public Subnet x2
+- Private Subnet x2
+- Internet Gateway
+- NAT Gateway
+- Elastic IP
+- Public Route Table
+- Private Route Table
+- Security Group
+  - ALB用Security Group
+  - EC2用Security Group
+- EC2 Instance
+- IAM Role
+- IAM Instance Profile
+- Application Load Balancer
+- Target Group
+- Listener
+- Target Group Attachment
 ---
 
 ## UserDataで自動化した内容
@@ -119,6 +155,57 @@ EC2起動時に以下を自動実行します。
 
 実行スクリプトは `terraform/user_data.sh` に定義しています。
 
+## セキュリティ設計
+
+本構成では、EC2をPrivate Subnetに配置し、インターネットから直接アクセスできない構成にしています。
+
+外部からのHTTPアクセスはApplication Load Balancerで受け付け、ALBからPrivate EC2上のnginxコンテナへ転送します。
+
+### Security Group
+
+#### ALB用Security Group
+
+- Inbound
+  - HTTP 80: 0.0.0.0/0
+- Outbound
+  - All traffic
+
+#### EC2用Security Group
+
+- Inbound
+  - HTTP 80: ALB Security Groupからのみ許可
+- Outbound
+  - All traffic
+
+SSHは使用せず、EC2への管理接続はSystems Manager Session Managerを利用します。
+
+## 動作確認
+
+### ALB経由のブラウザアクセス
+
+Terraform apply後に出力されるALB DNS名へアクセスし、nginxコンテナで配信しているHTMLページが表示されることを確認しました。
+
+```bash
+terraform output alb_dns_name
+
+Target Group Health Check
+
+Target Groupに登録されたEC2インスタンスが Healthy になることを確認しました。
+
+Session Manager接続
+
+Private Subnet上のEC2へ、SSHではなくSystems Manager Session Managerで接続できることを確認しました。
+
+EC2内部確認
+# Dockerサービスが起動しているか確認
+sudo systemctl status docker
+# 起動中のDockerコンテナを確認
+sudo docker ps
+# EC2内部からnginxにアクセスできるか確認
+curl http://localhost
+# nginxコンテナのログを確認
+sudo docker logs nginx-container
+
 ---
 
 ## Dockerで学習した内容
@@ -128,7 +215,6 @@ EC2起動時に以下を自動実行します。
 ```bash
 docker run -d -p 80:80 --name nginx-container nginx
 ```
-
 ### コンテナ確認
 
 ```bash
@@ -207,6 +293,10 @@ terraform destroy
 * outputs.tfの利用方法
 * Terraform Stateの概念
 * terraform plan の重要性
+- ALB / Target Group / Listener のコード化
+- IAM Role / Instance Profile のコード化
+- Security Group Rule の分離管理
+- Terraform apply / destroy による環境管理
 
 ### AWS
 
@@ -215,6 +305,13 @@ terraform destroy
 * Route Tableの役割
 * Security Groupによるアクセス制御
 * EC2作成とSSH接続
+- Public Subnet / Private Subnet の使い分け
+- ALBをPublic Subnetに配置する理由
+- EC2をPrivate Subnetに配置するセキュリティ上のメリット
+- NAT GatewayによるPrivate Subnetからの外向き通信
+- Target GroupとHealth Checkの仕組み
+- Security Group間参照によるアクセス制御
+- Session ManagerによるSSHレス接続
 
 ### UserData
 * EC2初回起動時の自動処理
@@ -225,11 +322,12 @@ terraform destroy
 
 ## 今後の改善予定
 
-* Docker Volume Mountの完全自動化
-* Application Load Balancer (ALB) の追加
-* Route53による独自ドメイン対応
-* Terraform Module化
-* 3層構成への拡張
+- Auto Scaling Groupの追加
+- Launch Templateの利用
+- CloudWatch Alarmによるスケールアウト
+- HTTPS化（ACM + ALB Listener 443）
+- Route53による独自ドメイン対応
+- Terraform Module化
 
 ---
 

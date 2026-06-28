@@ -1,9 +1,5 @@
-output "ec2_public_ip" {
-  description = "Public IP address of EC2 instance"
-  value       = aws_instance.docker_host.public_ip
-}
-
-output "ec2_public_dns" {
-  description = "Public DNS name of EC2 instance"
-  value       = aws_instance.docker_host.public_dns
+# ブラウザでアクセスするALBのDNS名を出力
+output "alb_dns_name" {
+  description = "DNS name of the ALB"
+  value       = aws_lb.app_alb.dns_name
 }

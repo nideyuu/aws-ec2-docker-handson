@@ -22,14 +22,27 @@ variable "availability_zone" {
   description = "Availability zone for public subnet"
   type        = string
 }
-
-variable "my_ip" {
-  description = "Your public IP address for SSH access"
+# Public Subnet 1c
+variable "public_subnet_1c_cidr" {
+  description = "CIDR block for public subnet in ap-northeast-1c"
   type        = string
 }
 
-variable "key_name" {
-  description = "Existing EC2 key pair name"
+# Private Subnet 1a
+variable "private_subnet_1a_cidr" {
+  description = "CIDR block for private subnet in ap-northeast-1a"
+  type        = string
+}
+
+# Private Subnet 1c
+variable "private_subnet_1c_cidr" {
+  description = "CIDR block for private subnet in ap-northeast-1c"
+  type        = string
+}
+
+# AZ 1c
+variable "availability_zone_1c" {
+  description = "Second Availability Zone"
   type        = string
 }
 variable "ami_id" {
